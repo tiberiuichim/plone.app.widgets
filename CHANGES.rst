@@ -3,6 +3,8 @@ Changelog
 
 1.8.1 (unreleased)
 ------------------
+- updated mockup widgets bundle, based on new build of mockup
+  [tiberiuichim 15-06-2016]
 
 - update mockup widgets bundle and fix ``get_tinymce_options``
   to return plugins as list (like Plone 5 does ...

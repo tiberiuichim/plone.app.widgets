@@ -734,7 +734,7 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
                 getattr(field, 'vocabularyName', None)):
             self.vocabulary = field.vocabularyName
             self.vocabulary_override = True
-        else:
+        elif self.vocabulary is None:
             self.vocabulary = 'plone.app.vocabularies.Catalog'
 
     def _base_args(self):

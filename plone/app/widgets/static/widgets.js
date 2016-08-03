@@ -32914,11 +32914,11 @@ define('mockup-patterns-tree',[
  *    cached. (true)
  *    closeOnSelect(boolean): Select2 option. Whether or not the drop down should be closed when an item is selected. (false)
  *    dropdownCssClass(string): Select2 option. CSS class to add to the drop down element. ('pattern-relateditems-dropdown')
- *  
+ *
  * #this does not respect custom dx types which are also folderish:
  * --> folderTypes(array): Types which should be considered browsable. (["Folder"])
  * #   needs to be implemented with meta data field: is_folderish from vocabulary
- * 
+ *
  *    homeText(string): Text to display in the initial breadcrumb item. (home)
  *    maximumSelectionSize(integer): The maximum number of items that can be selected in a multi-select control. If this number is less than 1 selection is not limited. (-1)
  *    multiple(boolean): Do not change this option. (true)
@@ -33003,7 +33003,7 @@ define('mockup-patterns-relateditems',[
       basePath: '/',
       rootPath: '/',
       homeText: _t('home'),
-      //folderTypes: ['Folder'],   
+      //folderTypes: ['Folder'],
       selectableTypes: null, // null means everything is selectable, otherwise a list of strings to match types that are selectable
       attributes: ['UID', 'Title', 'portal_type', 'path','getURL', 'getIcon','is_folderish','review_state'],
       dropdownCssClass: 'pattern-relateditems-dropdown',
@@ -33296,7 +33296,7 @@ define('mockup-patterns-relateditems',[
          else {
                item.folderish = false;
            }
-      
+
 
         item.selectable = self.isSelectable(item);
 
@@ -33330,6 +33330,24 @@ define('mockup-patterns-relateditems',[
               }
             }
           }
+        });
+
+        var contain = self.$container.parents('.linkModal')
+        $(contain).on('click', function(event) {
+            event.preventDefault();
+            if ($(event.target).closest(".select2-results").length === 0) {
+                $(".select2-results").hide();
+            }
+        });
+
+        $('.select2-choices').on('click', function(event) {
+            event.preventDefault();
+            $('.select2-results').show();
+        });
+
+        $('.plone-modal-close').on('click', function(event) {
+            event.preventDefault();
+            $('.select2-results').hide();
         });
 
         $('.pattern-relateditems-result-browse', result).on('click', function(event) {
@@ -84577,7 +84595,12 @@ define('mockup-patterns-modal',[
 
         // Non-ajax link (I know it says "ajaxUrl" ...)
         if (options.displayInModal === false) {
-          window.parent.location.href = url;
+          if($action.attr('target') === '_blank'){
+            window.open(url, '_blank');
+            self.loading.hide();
+          }else{
+            window.location = url;
+          }
           return;
         }
 
@@ -87819,38 +87842,6 @@ define('mockup-patterns-tinymce-url/js/links',[
       self.dom = self.tiny.dom;
       self.linkType = self.options.initialLinkType;
       self.linkTypes = {};
-
-      self.data = {};
-      // get selection BEFORE..
-      // This is pulled from TinyMCE link plugin
-      self.initialText = null;
-      var value;
-      self.rng = self.tiny.selection.getRng();
-      self.selectedElm = self.tiny.selection.getNode();
-      self.anchorElm = self.tiny.dom.getParent(self.selectedElm, 'a[href]');
-      self.onlyText = self.isOnlyTextSelected();
-
-      self.data.text = self.initialText = self.anchorElm ? (self.anchorElm.innerText || self.anchorElm.textContent) : self.tiny.selection.getContent({format: 'text'});
-      self.data.href = self.anchorElm ? self.tiny.dom.getAttrib(self.anchorElm, 'href') : '';
-
-      if (self.anchorElm) {
-        self.data.target = self.tiny.dom.getAttrib(self.anchorElm, 'target');
-      } else if (self.tiny.settings.default_link_target) {
-        self.data.target = self.tiny.settings.default_link_target;
-      }
-
-      if ((value = self.tiny.dom.getAttrib(self.anchorElm, 'rel'))) {
-        self.data.rel = value;
-      }
-
-      if ((value = self.tiny.dom.getAttrib(self.anchorElm, 'class'))) {
-        self.data['class'] = value;
-      }
-
-      if ((value = self.tiny.dom.getAttrib(self.anchorElm, 'title'))) {
-        self.data.title = value;
-      }
-
       self.modal = registry.patterns['plone-modal'].init(self.$el, {
         html: self.generateModalHtml(),
         content: null,
@@ -88122,6 +88113,38 @@ define('mockup-patterns-tinymce-url/js/links',[
 
     initData: function() {
       var self = this;
+
+      self.data = {};
+      // get selection BEFORE..
+      // This is pulled from TinyMCE link plugin
+      self.initialText = null;
+      var value;
+      self.rng = self.tiny.selection.getRng();
+      self.selectedElm = self.tiny.selection.getNode();
+      self.anchorElm = self.tiny.dom.getParent(self.selectedElm, 'a[href]');
+      self.onlyText = self.isOnlyTextSelected();
+
+      self.data.text = self.initialText = self.anchorElm ? (self.anchorElm.innerText || self.anchorElm.textContent) : self.tiny.selection.getContent({format: 'text'});
+      self.data.href = self.anchorElm ? self.tiny.dom.getAttrib(self.anchorElm, 'href') : '';
+
+      if (self.anchorElm) {
+        self.data.target = self.tiny.dom.getAttrib(self.anchorElm, 'target');
+      } else if (self.tiny.settings.default_link_target) {
+        self.data.target = self.tiny.settings.default_link_target;
+      }
+
+      if ((value = self.tiny.dom.getAttrib(self.anchorElm, 'rel'))) {
+        self.data.rel = value;
+      }
+
+      if ((value = self.tiny.dom.getAttrib(self.anchorElm, 'class'))) {
+        self.data['class'] = value;
+      }
+
+      if ((value = self.tiny.dom.getAttrib(self.anchorElm, 'title'))) {
+        self.data.title = value;
+      }
+
       self.selection = self.tiny.selection;
       self.tiny.focus();
       var selectedElm = self.imgElm = self.selection.getNode();

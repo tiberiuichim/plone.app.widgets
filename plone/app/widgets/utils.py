@@ -423,8 +423,11 @@ def get_tinymce_options(context, field, request):
                 'theme_advanced_source_editor_height']
 
         folder = context
-        if not IFolderish.providedBy(context):
-            folder = aq_parent(context)
+        while not IPloneSiteRoot.providedBy(folder):
+            if IFolderish.providedBy(folder):
+                break
+            else:
+                folder = aq_parent(folder)
         if IPloneSiteRoot.providedBy(folder):
             initial = None
         else:

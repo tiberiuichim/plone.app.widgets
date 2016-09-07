@@ -32310,6 +32310,11 @@ define('mockup-patterns-relateditems',[
 
       $('.dropdown-toggle', self.$toolbar).dropdown();
 
+      self.$el.parents('.pattern-relateditems-container').parents().on('click', function(){
+          self.$el.select2('close');
+          return false;
+      });
+
       $('button.mode.search', self.$toolbar).on('click', function(e) {
         e.preventDefault();
         if (self.browsing) {

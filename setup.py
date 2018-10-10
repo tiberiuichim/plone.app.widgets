@@ -2,12 +2,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-<<<<<<< HEAD
 version = '1.10.dev2'
-=======
-
-version = '1.11.dev0'
->>>>>>> upstream/1.x
 
 setup(
     name='plone.app.widgets',

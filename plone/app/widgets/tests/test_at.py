@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 from DateTime import DateTime
+from datetime import datetime
+from mock import Mock
+from plone.app.testing import login
+from plone.app.testing import setRoles
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
+from plone.app.widgets.browser.vocabulary import VocabularyView
+from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
+from plone.app.widgets.testing import TestRequest
+from plone.testing.zca import ZCML_DIRECTIVES
 from Products.Archetypes.atapi import BaseContent
 from Products.Archetypes.atapi import ReferenceField
 from Products.Archetypes.atapi import Schema
 from Products.Archetypes.atapi import StringField
 from Products.CMFCore.utils import getToolByName
-from datetime import datetime
-from mock import Mock
-from plone.app.testing import TEST_USER_ID
-from plone.app.testing import TEST_USER_NAME
-from plone.app.testing import login
-from plone.app.testing import setRoles
-from plone.app.widgets.browser.vocabulary import VocabularyView
-from plone.app.widgets.testing import PLONEAPPWIDGETS_INTEGRATION_TESTING
-from plone.app.widgets.testing import TestRequest
-from plone.testing.zca import ZCML_DIRECTIVES
 from zope.configuration import xmlconfig
 from zope.globalrequest import setRequest
+
 import json
 import mock
 import plone.uuid
@@ -119,6 +120,16 @@ class DateWidgetTests(unittest.TestCase):
             (datetime(2011, 11, 22))
         )
 
+    def test_process_form_empty_existing(self):
+        form = {
+            'fieldname': ''
+        }
+        self.assertEqual(
+            self.widget.process_form(
+                self.context, self.field, form)[0],
+            None
+        )
+
 
 class DatetimeWidgetTests(unittest.TestCase):
 
@@ -188,6 +199,16 @@ class DatetimeWidgetTests(unittest.TestCase):
             self.widget.process_form(
                 self.context, self.field, form)[0].asdatetime(),
             (datetime(2011, 11, 22, 13, 30))
+        )
+
+    def test_process_form_empty_existing(self):
+        form = {
+            'fieldname': ''
+        }
+        self.assertEqual(
+            self.widget.process_form(
+                self.context, self.field, form)[0],
+            None
         )
 
 
@@ -343,7 +364,6 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'value': '{};{}'.format(IUUID(obj1), IUUID(obj2)),
                 'pattern': 'relateditems',
                 'pattern_options': {
-                    'folderTypes': ['SomeType'],
                     'selectableTypes': ['SomeSelectableType', ],
                     'homeText': u'Home',
                     'searchAllText': u'Entire site',
@@ -388,7 +408,6 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'value': '{}'.format(IUUID(obj1)),
                 'pattern': 'relateditems',
                 'pattern_options': {
-                    'folderTypes': ['SomeType'],
                     'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
@@ -421,7 +440,6 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'value': '',
                 'pattern': 'relateditems',
                 'pattern_options': {
-                    'folderTypes': ['SomeType'],
                     'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
@@ -471,7 +489,6 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'value': '{}'.format(IUUID(obj1)),
                 'pattern': 'relateditems',
                 'pattern_options': {
-                    'folderTypes': ['SomeType'],
                     'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
@@ -502,7 +519,6 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'value': '{};{}'.format(IUUID(obj1), IUUID(obj2)),
                 'pattern': 'relateditems',
                 'pattern_options': {
-                    'folderTypes': ['SomeType'],
                     'homeText': u'Home',
                     'separator': ';',
                     'orderable': True,
@@ -562,6 +578,7 @@ class TinyMCEWidgetTests(unittest.TestCase):
         self.request = TestRequest(environ={'HTTP_ACCEPT_LANGUAGE': 'en'})
         self.field = Mock()
         self.field.getAccessor.return_value = lambda: 'fieldvalue'
+        self.field.getRaw.return_value = 'fieldvalue'
         self.field.getName.return_value = 'fieldname'
         self.field.getContentType.return_value = 'text/html'
 

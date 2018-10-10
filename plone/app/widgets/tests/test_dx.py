@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 from datetime import date
 from datetime import datetime
-from mock import Mock
-from plone.app.testing import TEST_USER_ID
-from plone.app.testing import TEST_USER_NAME
 from plone.app.testing import login
 from plone.app.testing import setRoles
+from plone.app.testing import TEST_USER_ID
+from plone.app.testing import TEST_USER_NAME
 from plone.app.widgets.browser.vocabulary import VocabularyView
 from plone.app.widgets.interfaces import IWidgetsLayer
 from plone.app.widgets.testing import ExampleVocabulary
@@ -16,7 +15,9 @@ from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.dexterity.fti import DexterityFTI
 from plone.registry.interfaces import IRegistry
 from plone.testing.zca import UNIT_TESTING
-from z3c.form.interfaces import IFieldWidget, IFormLayer
+from z3c.form.form import Form
+from z3c.form.interfaces import IFieldWidget
+from z3c.form.interfaces import IFormLayer
 from z3c.form.util import getSpecification
 from z3c.form.widget import FieldWidget
 from zope import schema
@@ -25,8 +26,9 @@ from zope.component import provideAdapter
 from zope.component import provideUtility
 from zope.component.globalregistry import base
 from zope.globalrequest import setRequest
-from zope.interface import Interface
 from zope.interface import alsoProvides
+from zope.interface import Interface
+from zope.schema import BytesLine
 from zope.schema import Choice
 from zope.schema import Date
 from zope.schema import Datetime
@@ -34,16 +36,12 @@ from zope.schema import List
 from zope.schema import Set
 from zope.schema import TextLine
 from zope.schema import Tuple
+
 import json
 import mock
 import pytz
 import unittest
 
-try:
-    from Products.CMFPlone.factory import _IMREALLYPLONE5  # noqa
-    PLONE50 = True
-except ImportError:
-    PLONE50 = False
 
 try:
     from Products.CMFPlone.interfaces import IMarkupSchema
@@ -184,8 +182,8 @@ class DateWidgetTests(unittest.TestCase):
     def test_fieldwidget(self):
         from plone.app.widgets.dx import DateWidget
         from plone.app.widgets.dx import DateFieldWidget
-        field = Mock(__name__='field', title=u'', required=True)
-        request = Mock()
+        field = mock.Mock(__name__='field', title=u'', required=True)
+        request = mock.Mock()
         widget = DateFieldWidget(field, request)
         self.assertTrue(isinstance(widget, DateWidget))
         self.assertIs(widget.field, field)
@@ -286,7 +284,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         """When no timezone is set, don't apply one.
         """
         from plone.app.widgets.dx import DatetimeWidgetConverter
-        context = Mock()
+        context = mock.Mock()
 
         dt = datetime(2013, 11, 13, 10, 20)
         setattr(context, self.field.getName(), dt)
@@ -307,7 +305,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         """When a (pytz) timezone id is set, use that.
         """
         from plone.app.widgets.dx import DatetimeWidgetConverter
-        context = Mock()
+        context = mock.Mock()
 
         dt = datetime(2013, 11, 13, 10, 20)
         setattr(context, self.field.getName(), dt)
@@ -330,7 +328,7 @@ class DatetimeWidgetTests(unittest.TestCase):
         use that.
         """
         from plone.app.widgets.dx import DatetimeWidgetConverter
-        context = Mock()
+        context = mock.Mock()
 
         dt = datetime(2013, 11, 13, 10, 20)
         setattr(context, self.field.getName(), dt)
@@ -351,8 +349,8 @@ class DatetimeWidgetTests(unittest.TestCase):
     def test_fieldwidget(self):
         from plone.app.widgets.dx import DatetimeWidget
         from plone.app.widgets.dx import DatetimeFieldWidget
-        field = Mock(__name__='field', title=u'', required=True)
-        request = Mock()
+        field = mock.Mock(__name__='field', title=u'', required=True)
+        request = mock.Mock()
         widget = DatetimeFieldWidget(field, request)
         self.assertTrue(isinstance(widget, DatetimeWidget))
         self.assertIs(widget.field, field)
@@ -764,7 +762,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
         from plone.app.widgets.dx import AjaxSelectWidget
         from zope.schema.interfaces import ISource
         widget = AjaxSelectWidget(self.request)
-        source = Mock()
+        source = mock.Mock()
         alsoProvides(source, ISource)
         widget.field = Choice(__name__='choicefield', source=source)
         widget.name = 'choicefield'
@@ -786,7 +784,7 @@ class AjaxSelectWidgetTests(unittest.TestCase):
     def test_widget_addform_url_on_addform(self):
         from plone.app.widgets.dx import AjaxSelectWidget
         widget = AjaxSelectWidget(self.request)
-        form = Mock(parentForm=None)
+        form = mock.Mock(parentForm=None)
         from zope.interface import directlyProvides
         from z3c.form.interfaces import IAddForm
         directlyProvides(form, IAddForm)
@@ -877,8 +875,8 @@ class AjaxSelectWidgetTests(unittest.TestCase):
     def test_fieldwidget(self):
         from plone.app.widgets.dx import AjaxSelectWidget
         from plone.app.widgets.dx import AjaxSelectFieldWidget
-        field = Mock(__name__='field', title=u'', required=True)
-        request = Mock()
+        field = mock.Mock(__name__='field', title=u'', required=True)
+        request = mock.Mock()
         widget = AjaxSelectFieldWidget(field, request)
         self.assertTrue(isinstance(widget, AjaxSelectWidget))
         self.assertIs(widget.field, field)
@@ -887,9 +885,9 @@ class AjaxSelectWidgetTests(unittest.TestCase):
     def test_fieldwidget_sequence(self):
         from plone.app.widgets.dx import AjaxSelectWidget
         from plone.app.widgets.dx import AjaxSelectFieldWidget
-        field = Mock(__name__='field', title=u'', required=True)
-        vocabulary = Mock()
-        request = Mock()
+        field = mock.Mock(__name__='field', title=u'', required=True)
+        vocabulary = mock.Mock()
+        request = mock.Mock()
         widget = AjaxSelectFieldWidget(field, vocabulary, request)
         self.assertTrue(isinstance(widget, AjaxSelectWidget))
         self.assertIs(widget.field, field)
@@ -938,7 +936,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
 
     def test_widget(self):
         from plone.app.widgets.dx import RelatedItemsWidget
-        context = Mock(absolute_url=lambda: 'fake_url',
+        context = mock.Mock(absolute_url=lambda: 'fake_url',
                        getPhysicalPath=lambda: ['', 'site'])
         context.portal_properties.site_properties\
             .getProperty.return_value = ['SomeType']
@@ -952,7 +950,6 @@ class RelatedItemsWidgetTests(unittest.TestCase):
                 'value': u'',
                 'pattern': 'relateditems',
                 'pattern_options': {
-                    'folderTypes': ['SomeType'],
                     'selectableTypes': ['SomeSelectableType', ],
                     'homeText': u'Home',
                     'searchAllText': u'Entire site',
@@ -970,7 +967,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         """The pattern_options value for maximumSelectionSize should
         be 1 when the field only allows a single selection."""
         from plone.app.widgets.dx import RelatedItemsFieldWidget
-        context = Mock(absolute_url=lambda: 'fake_url',
+        context = mock.Mock(absolute_url=lambda: 'fake_url',
                        getPhysicalPath=lambda: ['', 'site'])
         context.portal_properties.site_properties\
             .getProperty.return_value = ['SomeType']
@@ -992,7 +989,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         from zope.schema.interfaces import ISource
         from zope.schema.vocabulary import VocabularyRegistry
 
-        context = Mock(absolute_url=lambda: 'fake_url',
+        context = mock.Mock(absolute_url=lambda: 'fake_url',
                        getPhysicalPath=lambda: ['', 'site'])
         context.portal_properties.site_properties\
             .getProperty.return_value = ['SomeType']
@@ -1003,7 +1000,7 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         widget = RelatedItemsFieldWidget(field, self.request)
         widget.context = context
 
-        vocab = Mock()
+        vocab = mock.Mock()
         alsoProvides(vocab, ISource)
         with mock.patch.object(VocabularyRegistry, 'get', return_value=vocab):
             widget.update()
@@ -1018,9 +1015,9 @@ class RelatedItemsWidgetTests(unittest.TestCase):
     def test_converter_RelationChoice(self):
         from plone.app.widgets.dx import \
             RelationChoiceRelatedItemsWidgetConverter
-        brain = Mock(getObject=Mock(return_value='obj'))
-        portal_catalog = Mock(return_value=[brain])
-        widget = Mock()
+        brain = mock.Mock(getObject=mock.Mock(return_value='obj'))
+        portal_catalog = mock.Mock(return_value=[brain])
+        widget = mock.Mock()
         converter = RelationChoiceRelatedItemsWidgetConverter(
             TextLine(), widget)
 
@@ -1039,10 +1036,10 @@ class RelatedItemsWidgetTests(unittest.TestCase):
         from plone.app.widgets.dx import IRelationList
         field = List()
         alsoProvides(field, IRelationList)
-        brain1 = Mock(getObject=Mock(return_value='obj1'), UID='id1')
-        brain2 = Mock(getObject=Mock(return_value='obj2'), UID='id2')
-        portal_catalog = Mock(return_value=[brain1, brain2])
-        widget = Mock(separator=';')
+        brain1 = mock.Mock(getObject=mock.Mock(return_value='obj1'), UID='id1')
+        brain2 = mock.Mock(getObject=mock.Mock(return_value='obj2'), UID='id2')
+        portal_catalog = mock.Mock(return_value=[brain1, brain2])
+        widget = mock.Mock(separator=';')
         converter = RelatedItemsDataConverter(field, widget)
 
         self.assertEqual(converter.toWidgetValue(None), None)
@@ -1060,24 +1057,34 @@ class RelatedItemsWidgetTests(unittest.TestCase):
 
     def test_converter_List_of_Choice(self):
         from plone.app.widgets.dx import RelatedItemsDataConverter
-        field = List()
-        widget = Mock(separator=';')
-        converter = RelatedItemsDataConverter(field, widget)
+        fields = (
+            List(),
+            List(value_type=TextLine()),
+            List(value_type=BytesLine()),
+            )
+        for field in fields:
+            expected_value_type = getattr(field.value_type, '_type', unicode)
+            widget = mock.Mock(separator=';')
+            converter = RelatedItemsDataConverter(field, widget)
 
-        self.assertEqual(converter.toWidgetValue(None), None)
-        self.assertEqual(
-            converter.toWidgetValue(['id1', 'id2']), 'id1;id2')
+            self.assertEqual(converter.toWidgetValue(None), None)
+            self.assertEqual(
+                converter.toWidgetValue(['id1', 'id2']), 'id1;id2')
 
-        self.assertEqual(converter.toFieldValue(None), None)
-        self.assertEqual(
-            converter.toFieldValue('id1;id2'), ['id1', 'id2'])
+            self.assertEqual(converter.toFieldValue(None), None)
+            self.assertEqual(
+                converter.toFieldValue('id1;id2'), ['id1', 'id2'])
+            self.assertEqual(
+                type(converter.toFieldValue('id1;id2')[0]),
+                expected_value_type
+                )
 
     def test_fieldwidget(self):
         from plone.app.widgets.dx import RelatedItemsWidget
         from plone.app.widgets.dx import RelatedItemsFieldWidget
-        field = Mock(__name__='field', title=u'', required=True)
-        vocabulary = Mock()
-        request = Mock()
+        field = mock.Mock(__name__='field', title=u'', required=True)
+        vocabulary = mock.Mock()
+        request = mock.Mock()
         widget = RelatedItemsFieldWidget(field, vocabulary, request)
         self.assertTrue(isinstance(widget, RelatedItemsWidget))
         self.assertIs(widget.field, field)
@@ -1102,9 +1109,11 @@ def _custom_field_widget(field, request):
 
 
 def _enable_custom_widget(field):
-    provideAdapter(_custom_field_widget, adapts=
-                   (getSpecification(field), IWidgetsLayer),
-                   provides=IFieldWidget)
+    provideAdapter(
+        _custom_field_widget,
+        adapts=(getSpecification(field), IWidgetsLayer),
+        provides=IFieldWidget
+        )
 
 
 def _disable_custom_widget(field):
@@ -1154,16 +1163,59 @@ class RichTextWidgetTests(unittest.TestCase):
             base_args['pattern_options']['relatedItems']['basePath'],
             '/plone'
         )
-        # Next, we're only testing for the existance of folderTypes parameter.
-        # Values can either be set via GenericSetup (tinymce.xml) or
-        # plone.app.registry.
-        self.assertTrue(
-            'folderTypes' in base_args['pattern_options']['relatedItems']
+
+        self.assertEqual(base_args['pattern_options']['anchorSelector'],
+                         self.portal.portal_tinymce.anchor_selector)
+
+    def test_widget_params_different_contexts(self):
+        from plone.app.widgets.dx import RichTextWidget
+
+        setRoles(self.portal, TEST_USER_ID, ['Contributor'])
+
+        widget = FieldWidget(self.field, RichTextWidget(self.request))
+        self.portal.invokeFactory('Folder', 'sub')
+        sub = self.portal.sub
+        form = Form(sub, self.request)
+
+        # portal context
+        widget.context = self.portal
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone'
         )
 
-        if not PLONE50:
-            self.assertEqual(base_args['pattern_options']['anchorSelector'],
-                             self.portal.portal_tinymce.anchor_selector)
+        # sub context
+        widget.context = sub
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone/sub'
+        )
+
+        # form context
+        widget.context = form
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone/sub'
+        )
+
+        # non-contentish context
+        widget.context = None
+        widget.update()
+        base_args = widget._base_args()
+
+        self.assertEqual(
+            base_args['pattern_options']['relatedItems']['basePath'],
+            '/plone'
+        )
 
     def test_widget_values(self):
         from plone.app.widgets.dx import RichTextWidget

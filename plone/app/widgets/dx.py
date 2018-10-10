@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 from AccessControl import getSecurityManager
-from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.utils import safe_callable
 from datetime import date
 from datetime import datetime
 from lxml import etree
+from plone.app.dexterity.behaviors.metadata import ICategorization
+from plone.app.dexterity.behaviors.metadata import IOwnership
+from plone.app.dexterity.behaviors.metadata import IPublication
+from plone.app.textfield.interfaces import IRichText
 from plone.app.textfield.value import RichTextValue
 from plone.app.textfield.widget import IRichTextWidget as patextfield_IRichTextWidget  # noqa
 from plone.app.textfield.widget import RichTextWidget as patextfield_RichTextWidget  # noqa
-from plone.app.widgets.base import InputWidget
 from plone.app.widgets.base import SelectWidget as BaseSelectWidget
-from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.base import dict_merge
+from plone.app.widgets.base import InputWidget
+from plone.app.widgets.base import TextareaWidget
 from plone.app.widgets.interfaces import IFieldPermissionChecker
 from plone.app.widgets.interfaces import IWidgetsLayer
-from plone.app.widgets.utils import NotImplemented
+from plone.app.widgets.utils import first_weekday
 from plone.app.widgets.utils import get_ajaxselect_options
 from plone.app.widgets.utils import get_date_options
 from plone.app.widgets.utils import get_datetime_options
@@ -22,14 +24,18 @@ from plone.app.widgets.utils import get_querystring_options
 from plone.app.widgets.utils import get_relateditems_options
 from plone.app.widgets.utils import get_tinymce_options
 from plone.app.widgets.utils import get_widget_form
+from plone.app.widgets.utils import NotImplemented
 from plone.autoform.interfaces import WIDGETS_KEY
 from plone.autoform.interfaces import WRITE_PERMISSIONS_KEY
 from plone.autoform.utils import resolveDottedName
 from plone.dexterity.interfaces import IDexterityContent
-from plone.dexterity.utils import iterSchemata, getAdditionalSchemata
+from plone.dexterity.utils import getAdditionalSchemata
+from plone.dexterity.utils import iterSchemata
 from plone.registry.interfaces import IRegistry
 from plone.supermodel.utils import mergedTaggedValueDict
 from plone.uuid.interfaces import IUUID
+from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone.utils import safe_callable
 from z3c.form.browser.select import SelectWidget as z3cform_SelectWidget
 from z3c.form.browser.text import TextWidget as z3cform_TextWidget
 from z3c.form.browser.widget import HTMLInputWidget
@@ -38,7 +44,6 @@ from z3c.form.converter import CollectionSequenceDataConverter
 from z3c.form.converter import SequenceDataConverter
 from z3c.form.interfaces import IAddForm
 from z3c.form.interfaces import IFieldWidget
-from z3c.form.interfaces import IFormLayer
 from z3c.form.interfaces import ISelectWidget
 from z3c.form.interfaces import ITextWidget
 from z3c.form.interfaces import NO_VALUE
@@ -52,10 +57,10 @@ from zope.component import queryMultiAdapter
 from zope.component import queryUtility
 from zope.component.hooks import getSite
 from zope.i18n import translate
-from zope.interface import Interface
 from zope.interface import implementer
 from zope.interface import implements
 from zope.interface import implementsOnly
+from zope.interface import Interface
 from zope.publisher.browser import TestRequest
 from zope.schema.interfaces import IChoice
 from zope.schema.interfaces import ICollection
@@ -65,15 +70,10 @@ from zope.schema.interfaces import IField
 from zope.schema.interfaces import IList
 from zope.schema.interfaces import ISequence
 from zope.security.interfaces import IPermission
-import pytz
-import json
 
-try:
-    from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
-    from plone.app.contenttypes.behaviors.richtext import IRichText  # noqa
-    HAS_PAC = True
-except ImportError:
-    HAS_PAC = False
+import json
+import pytz
+
 
 try:
     from z3c.relationfield.interfaces import IRelationChoice
@@ -86,10 +86,24 @@ except ImportError:  # pragma: no cover
         pass
 
 try:
+    from plone.app.relationfield.behavior import IRelatedItems
+    HAS_RF = True
+except ImportError:
+    HAS_RF = False
+
+try:
+    from plone.app.contenttypes.behaviors.collection import ICollection as IDXCollection  # noqa
+    HAS_PAC = True
+except ImportError:
+    HAS_PAC = False
+
+try:
     from Products.CMFPlone.interfaces import IEditingSchema
 except ImportError:
     IEditingSchema = Interface
 
+
+# ### WIDGET INTERFACES
 
 class IDateField(IDate):
     """Marker interface for the DateField."""
@@ -126,6 +140,8 @@ class IRelatedItemsWidget(ITextWidget):
 class IRichTextWidget(patextfield_IRichTextWidget):
     """Marker interface for the TinyMCEWidget."""
 
+
+# ### CONVERTERS
 
 class DateWidgetConverter(BaseDataConverter):
     """Data converter for date fields."""
@@ -367,7 +383,8 @@ class RelatedItemsDataConverter(BaseDataConverter):
                                   for uid in value
                                   if uid in objects.keys())
         else:
-            return collectionType(v for v in value)
+            valueType = getattr(self.field.value_type, '_type', unicode)
+            return collectionType(valueType(v) for v in value)
 
 
 class QueryStringDataConverter(BaseDataConverter):
@@ -405,6 +422,8 @@ class QueryStringDataConverter(BaseDataConverter):
             return self.field.missing_value
         return value
 
+
+# ### WIDGETS
 
 class BaseWidget(Widget):
     """Base widget for z3c.form."""
@@ -610,7 +629,10 @@ class SelectWidget(BaseWidget, z3cform_SelectWidget):
             options['allowClear'] = True
 
         items = []
-        for item in self.items():
+        fetchitems = self.items
+        if callable(fetchitems):
+            fetchitems = fetchitems()
+        for item in fetchitems:
             if not isinstance(item['content'], basestring):
                 item['content'] = translate(
                     item['content'],
@@ -734,7 +756,7 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
                 getattr(field, 'vocabularyName', None)):
             self.vocabulary = field.vocabularyName
             self.vocabulary_override = True
-        elif self.vocabulary is None:
+        else:
             self.vocabulary = 'plone.app.vocabularies.Catalog'
 
     def _base_args(self):
@@ -778,7 +800,7 @@ class RelatedItemsWidget(BaseWidget, z3cform_TextWidget):
                                      widget=self),
             args['pattern_options'])
 
-        if not self.vocabulary_override:  # widget vocab takes precedence over field
+        if not self.vocabulary_override:  # widget vocab precedence over field
             if field and getattr(field, 'vocabulary', None):
                 form_url = self.request.getURL()
                 source_url = "%s/++widget++%s/@@getSource" % (
@@ -857,10 +879,9 @@ class RichTextWidget(BaseWidget, patextfield_RichTextWidget):
             self.field.getName(), value)).decode(charset)
 
         args.setdefault('pattern_options', {})
-        merged_options = dict_merge(get_tinymce_options(context,
-                                                        self.field,
-                                                        self.request),  # noqa
-                                    args['pattern_options'])
+        merged_options = dict_merge(
+            get_tinymce_options(context, self.field, self.request),
+            args['pattern_options'])
         args['pattern_options'] = merged_options
 
         return args
@@ -940,6 +961,8 @@ class RichTextWidget(BaseWidget, patextfield_RichTextWidget):
         return super(RichTextWidget, self).render()
 
 
+# ### FIELD WIDGETS
+
 @implementer(IFieldWidget)
 def DateFieldWidget(field, request):
     return FieldWidget(field, DateWidget(request))
@@ -962,24 +985,93 @@ def AjaxSelectFieldWidget(field, request, extra=None):
     return FieldWidget(field, AjaxSelectWidget(request))
 
 
+@adapter(IRichText, IWidgetsLayer)
+@implementer(IFieldWidget)
+def RichTextFieldWidget(field, request):
+    return FieldWidget(field, RichTextWidget(request))
+
+
+@adapter(getSpecification(ICategorization['subjects']), IWidgetsLayer)
+@implementer(IFieldWidget)
+def SubjectsFieldWidget(field, request):
+    widget = FieldWidget(field, AjaxSelectWidget(request))
+    widget.vocabulary = 'plone.app.vocabularies.Keywords'
+    return widget
+
+
+@adapter(getSpecification(ICategorization['language']), IWidgetsLayer)
+@implementer(IFieldWidget)
+def LanguageFieldWidget(field, request):
+    widget = FieldWidget(field, SelectWidget(request))
+    return widget
+
+
+@adapter(getSpecification(IPublication['effective']), IWidgetsLayer)
+@implementer(IFieldWidget)
+def EffectiveDateFieldWidget(field, request):
+    widget = FieldWidget(field, DatetimeWidget(request))
+    widget.pattern_options.setdefault('date', {})
+    widget.pattern_options['date']['firstDay'] = first_weekday()
+    return widget
+
+
+@adapter(getSpecification(IPublication['expires']), IWidgetsLayer)
+@implementer(IFieldWidget)
+def ExpirationDateFieldWidget(field, request):
+    widget = FieldWidget(field, DatetimeWidget(request))
+    widget.pattern_options.setdefault('date', {})
+    widget.pattern_options['date']['firstDay'] = first_weekday()
+    return widget
+
+
+@adapter(getSpecification(IOwnership['contributors']), IWidgetsLayer)
+@implementer(IFieldWidget)
+def ContributorsFieldWidget(field, request):
+    widget = FieldWidget(field, AjaxSelectWidget(request))
+    widget.vocabulary = 'plone.app.vocabularies.Users'
+    return widget
+
+
+@adapter(getSpecification(IOwnership['creators']), IWidgetsLayer)
+@implementer(IFieldWidget)
+def CreatorsFieldWidget(field, request):
+    widget = FieldWidget(field, AjaxSelectWidget(request))
+    widget.vocabulary = 'plone.app.vocabularies.Users'
+    return widget
+
+
 @implementer(IFieldWidget)
 def RelatedItemsFieldWidget(field, request, extra=None):
+    """Field widget for the relation choice, relation list and choice fields
+    with a vocabulary or a catalog source.
+    Plone 5 style.
+    """
     if extra is not None:
         request = extra
     return FieldWidget(field, RelatedItemsWidget(request))
 
 
+if HAS_RF:
+    @adapter(getSpecification(IRelatedItems['relatedItems']), IWidgetsLayer)
+    @implementer(IFieldWidget)
+    def RelatedItemsBehaviorFieldWidget(field, request):
+        """Field widget for the related items behavior from plone.app.dexterity
+        Has a preconfigured vocabulary.
+        """
+        widget = FieldWidget(field, RelatedItemsWidget(request))
+        widget.vocabulary = 'plone.app.vocabularies.Catalog'
+        widget.vocabulary_override = True
+        return widget
+
+
 if HAS_PAC:
-    @adapter(getSpecification(IDXCollection['query']), IFormLayer)
+    @adapter(getSpecification(IDXCollection['query']), IWidgetsLayer)
     @implementer(IFieldWidget)
     def QueryStringFieldWidget(field, request):
         return FieldWidget(field, QueryStringWidget(request))
 
-    @adapter(getSpecification(IRichText['text']), IFormLayer)
-    @implementer(IFieldWidget)
-    def RichTextFieldWidget(field, request):
-        return FieldWidget(field, RichTextWidget(request))
 
+# ### OTHER
 
 class MockRequest(TestRequest):
     implements(IWidgetsLayer)
@@ -1049,6 +1141,8 @@ class DXAddViewFieldPermissionChecker(DXFieldPermissionChecker):
     """Permission checker for when we just have an add view"""
 
     adapts(IAddForm)
+
+    DEFAULT_PERMISSION = 'Add portal content'
 
     def __init__(self, view):
         self.context = view.context

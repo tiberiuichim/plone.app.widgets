@@ -15,8 +15,16 @@
   <include package="plone.app.vocabularies" />
   <include package=".browser" />
 
-  <include package="mockup"
-      zcml:condition="installed mockup" />
+  <browser:resource
+      name="plone.app.widgets-requirejs-unset.js"
+      file="static/requirejs-unset.js"
+      layer=".interfaces.IWidgetsLayer"
+      />
+  <browser:resource
+      name="plone.app.widgets-requirejs-reset.js"
+      file="static/requirejs-reset.js"
+      layer=".interfaces.IWidgetsLayer"
+      />
 
   <browser:resource
       name="plone.app.widgets-bootstrap-glyphicons-halflings-regular.eot"
@@ -157,29 +165,32 @@
         layer=".interfaces.IWidgetsLayer"
         />
   </configure>
-  <configure zcml:condition="installed mockup"><configure package="mockup">
-    <!-- You have to build whe widgets bundle, if mockup is installed -->
-    <browser:resource
-        name="plone.app.widgets.js"
-        file="build/widgets.js"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-    <browser:resource
-        name="plone.app.widgets.min.js.map"
-        file="build/widgets.min.js.map"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-    <browser:resource
-        name="plone.app.widgets.css"
-        file="build/widgets.min.css"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-    <browser:resource
-        name="plone.app.widgets.min.css.map"
-        file="build/widgets.min.css.map"
-        layer="plone.app.widgets.interfaces.IWidgetsLayer"
-        />
-  </configure></configure>
+  <configure zcml:condition="installed mockup">
+    <include package="mockup" />
+    <configure package="mockup">
+      <!-- You have to build whe widgets bundle, if mockup is installed -->
+      <browser:resource
+          name="plone.app.widgets.js"
+          file="build/widgets.js"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+      <browser:resource
+          name="plone.app.widgets.min.js.map"
+          file="build/widgets.min.js.map"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+      <browser:resource
+          name="plone.app.widgets.css"
+          file="build/widgets.min.css"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+      <browser:resource
+          name="plone.app.widgets.min.css.map"
+          file="build/widgets.min.css.map"
+          layer="plone.app.widgets.interfaces.IWidgetsLayer"
+          />
+    </configure>
+  </configure>
 
   <cmf:registerDirectory name="plone_widgets" />
 
@@ -189,6 +200,12 @@
     <include package="archetypes.schemaextender" />
     <adapter factory=".factories.ATCTFileFactory" />
     <adapter factory=".at.ATFieldPermissionChecker" />
+    <adapter
+        name="plone.app.widgets"
+        factory=".at.MetadataExtender"
+        for="Products.ATContentTypes.interface.IATContentType"
+        provides="archetypes.schemaextender.interfaces.ISchemaModifier"
+        />
   </configure>
 
   <configure zcml:condition="installed plone.app.dexterity">
@@ -214,105 +231,53 @@
     <adapter factory=".dx.QueryStringDataConverter" />
     <adapter factory=".dx.RelationChoiceRelatedItemsWidgetConverter" />
     <adapter factory=".dx.RelatedItemsDataConverter" />
-  </configure>
 
-  <!-- plone<5 configuration -->
-  <configure zcml:condition="not-have plone-5">
+    <adapter factory=".dx.SubjectsFieldWidget" />
+    <adapter factory=".dx.LanguageFieldWidget" />
+    <adapter factory=".dx.EffectiveDateFieldWidget" />
+    <adapter factory=".dx.ExpirationDateFieldWidget" />
+    <adapter factory=".dx.ContributorsFieldWidget" />
+    <adapter factory=".dx.CreatorsFieldWidget" />
 
-    <configure zcml:condition="installed Products.ATContentTypes">
-      <adapter
-          name="plone.app.widgets"
-          factory=".at_bbb.MetadataExtender"
-          for="Products.ATContentTypes.interface.IATContentType"
-          provides="archetypes.schemaextender.interfaces.ISchemaModifier"
-          />
+    <adapter
+        zcml:condition="installed z3c.relationfield"
+        factory=".dx.RelatedItemsFieldWidget"
+        for="z3c.relationfield.interfaces.IRelationChoice
+             plone.app.widgets.interfaces.IWidgetsLayer"
+        />
+    <adapter
+        zcml:condition="installed z3c.relationfield"
+        factory=".dx.RelatedItemsFieldWidget"
+        for="z3c.relationfield.interfaces.IRelationList
+             plone.app.widgets.interfaces.IWidgetsLayer"
+        />
+    <adapter
+        factory=".dx.RelatedItemsFieldWidget"
+        for="zope.schema.interfaces.IChoice
+             plone.app.vocabularies.catalog.CatalogSource
+             plone.app.widgets.interfaces.IWidgetsLayer"
+        />
+
+    <configure zcml:condition="installed plone.app.relationfield">
+      <adapter factory=".dx.RelatedItemsBehaviorFieldWidget" />
     </configure>
 
-    <configure zcml:condition="installed plone.app.dexterity">
-      <adapter factory=".dx_bbb.SubjectsFieldWidget" />
-      <adapter factory=".dx_bbb.LanguageFieldWidget" />
-      <adapter factory=".dx_bbb.EffectiveDateFieldWidget" />
-      <adapter factory=".dx_bbb.ExpirationDateFieldWidget" />
-      <adapter factory=".dx_bbb.ContributorsFieldWidget" />
-      <adapter factory=".dx_bbb.CreatorsFieldWidget" />
-
-      <configure zcml:condition="installed plone.app.relationfield">
-        <adapter factory=".dx_bbb.RelatedItemsFieldWidget" />
-      </configure>
-
-      <!-- override p.a.contenttypes specific widgets -->
-      <configure zcml:condition="installed plone.app.contenttypes">
-          <adapter factory=".dx_bbb.QueryStringFieldWidget" />
-          <adapter factory=".dx_bbb.RichTextFieldWidget" />
-      </configure>
-
+    <!-- override p.a.contenttypes specific widgets -->
+    <configure zcml:condition="installed plone.app.contenttypes">
+        <adapter factory=".dx.QueryStringFieldWidget" />
     </configure>
 
   </configure>
 
-  <!-- plone 5 configuration -->
-  <configure zcml:condition="have plone-5">
-
-    <class class=".dx.DateWidget">
-      <require permission="zope.Public"
-               interface=".dx.IDateWidget" />
-    </class>
-    <class class="zope.schema._field.Date">
-      <implements interface=".dx.IDateField"/>
-    </class>
-    <adapter
-        factory=".dx.DateFieldWidget"
-        for=".dx.IDateField
-             z3c.form.interfaces.IFormLayer" />
-
-    <class class=".dx.DatetimeWidget">
-      <require permission="zope.Public"
-               interface=".dx.IDatetimeWidget" />
-    </class>
-    <class class="zope.schema._field.Datetime">
-      <implements interface=".dx.IDatetimeField"/>
-    </class>
-    <adapter
-        factory=".dx.DatetimeFieldWidget"
-        for=".dx.IDatetimeField
-             z3c.form.interfaces.IFormLayer" />
-
-    <adapter factory=".dx.RelatedItemsFieldWidget"
-            for="z3c.relationfield.interfaces.IRelationChoice
-                  z3c.form.interfaces.IFormLayer"
-            />
-
-    <adapter factory=".dx.RelatedItemsFieldWidget"
-            for="z3c.relationfield.interfaces.IRelationList
-                  z3c.form.interfaces.IFormLayer"
-            />
-
-    <adapter
-      factory=".dx.RelatedItemsFieldWidget"
-      for="zope.schema.interfaces.IChoice
-           plone.app.vocabularies.catalog.CatalogSource
-           z3c.form.interfaces.IFormLayer" />
-
-    <adapter factory=".dx.QueryStringFieldWidget" />
+  <configure zcml:condition="installed plone.app.textfield">
+    <!-- rich text widget for plone.app.textfield -->
     <adapter factory=".dx.RichTextFieldWidget" />
-
   </configure>
 
   <genericsetup:registerProfile
-    zcml:condition="not-have plone-5"
     name="default"
     title="Plone Widgets"
     directory="profiles/default"
-    description="Better widgets for Plone"
-    provides="Products.GenericSetup.interfaces.EXTENSION"
-    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
-    />
-
-  <genericsetup:registerProfile
-    zcml:condition="have plone-5"
-    name="default"
-    title="Plone Widgets"
-    directory="profiles/p5"
     description="Better widgets for Plone"
     provides="Products.GenericSetup.interfaces.EXTENSION"
     for="Products.CMFPlone.interfaces.IPloneSiteRoot"
@@ -354,5 +319,14 @@
       import_steps="plone.app.registry"
       purge="False"
       run_deps="False" />
+
+  <genericsetup:upgradeStep
+      title="Unset / Reset RequireJS"
+      description="Integrate Scripts to unset and reset RequireJS."
+      source="2"
+      destination="3"
+      handler="plone.app.widgets.upgrades.upgrade_2_to_3"
+      profile="plone.app.widgets:default"
+      />
 
 </configure>

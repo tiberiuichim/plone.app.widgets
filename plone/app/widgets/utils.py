@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-from Acquisition import aq_inner, aq_parent, aq_base
-from Products.CMFCore.interfaces import ISiteRoot
-from Products.CMFCore.interfaces._content import IFolderish
-from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.interfaces import IPloneSiteRoot
+from Acquisition import aq_base
+from Acquisition import aq_inner
+from Acquisition import aq_parent
 from datetime import datetime
 from plone.app.layout.navigation.root import getNavigationRootObject
 from plone.portlets.interfaces import IPortletAssignmentMapping
 from plone.registry.interfaces import IRegistry
 from plone.uuid.interfaces import IUUID
-from z3c.form.interfaces import IAddForm
+from Products.CMFCore.interfaces import ISiteRoot
+from Products.CMFCore.interfaces._content import IFolderish
+from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone.interfaces import IPloneSiteRoot
+from z3c.form.interfaces import IForm
 from zope.component import getMultiAdapter
 from zope.component import getUtility
 from zope.component import providedBy
@@ -18,7 +20,9 @@ from zope.component.hooks import getSite
 from zope.i18n import translate
 from zope.i18nmessageid import MessageFactory
 from zope.schema.interfaces import IVocabularyFactory
+
 import json
+
 
 _ = MessageFactory('plone.app.widgets')
 _plone = MessageFactory('plone')
@@ -141,7 +145,7 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
     options = get_ajaxselect_options(context, value, separator,
                                      vocabulary_name, vocabulary_view,
                                      field_name)
-    if IAddForm.providedBy(context):
+    if IForm.providedBy(context):
         context = context.context
     request = getattr(context, 'REQUEST')
     msgstr = translate(_plone(u'Search'), context=request)
@@ -152,12 +156,6 @@ def get_relateditems_options(context, value, separator, vocabulary_name,
                               default=u'Home'),
                        context=request)
     options.setdefault('homeText', msgstr)
-    options.setdefault('folderTypes', ['Folder'])
-
-    properties = getToolByName(context, 'portal_properties')
-    if properties:
-        options['folderTypes'] = properties.site_properties.getProperty(
-            'typesLinkToFolderContentsInFC', options['folderTypes'])
 
     if getattr(widget, 'selectable_types', None):
         options['selectableTypes'] = widget.selectable_types
@@ -317,7 +315,7 @@ def get_tinymce_options(context, field, request):
 
     button_settings['directionality'] = 'attribs' in config[
         'buttons'] and 'ltr rtl' or ''
-
+    
     # enable browser spell check by default:
     config['browser_spellcheck'] = True
 
@@ -488,7 +486,7 @@ def get_portal_url(context):
 
 
 def get_context_url(context):
-    if IAddForm.providedBy(context):
+    if IForm.providedBy(context):
         # Use the request URL if we are looking at an addform
         url = context.request.get('URL')
     elif hasattr(context, 'absolute_url'):

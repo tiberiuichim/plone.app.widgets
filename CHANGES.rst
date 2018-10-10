@@ -1,10 +1,118 @@
 Changelog
 =========
 
-1.10 (unreleased)
+1.11 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- Make z3c.relationfield a soft dependency.
+  [thet]
+
+- fix DEFAULT_PERMISSION for DXAddViewFieldPermissionChecker.
+  This fixes vocabulary lookups for AddForms in "non-editable" containers. (see #162)
+  [petschki]
+
+- TinyMCE configuration: consider ``horizontal ruler`` toolbar toggle.
+  [petschki]
+
+1.10 (2017-09-01)
+-----------------
+
+- Insert ``++resource++plone.app.widgets.js`` resource at the beginning, before ``++resource++plone.app.jquery.js`` (but after ``++resource++plone.app.widgets-requirejs-unset.js``).
+  This makes other installations more predictable when they install resources directly after ``++resource++plone.app.jquery.js``.
+  [thet]
+
+
+- PEP 8.
+  [thet]
+
+- Deprecate the ``at_bbb`` and ``dx_bbb`` modules.
+  They are merged with the ``at`` respectively ``dx`` modules.
+  [thet]
+
+- Unset and reset ``define`` and ``require`` before and after the plone.app.widgets JavaScript bundle.
+  This avoids the infamous ``Mismatched anonymous define`` error with unbundled JavaScript supporting RequireJS.
+  See: http://requirejs.org/docs/errors.html#mismatch
+  [thet, petschki]
+
+- Remove Plone 5 specific zcml conditions
+  [petschki]
+
+- Refactor IRichText FieldWidget adapter. Use interface from
+  plone.app.textfield to auto-enable RichTextWidget.
+  [petschki]
+
+- Fix `get_tinymce_options` for non-contentish contexts. See #161.
+  [petschki]
+
+- Fix RelatedItemsWidget calling self.items, which was turned back into a
+  property in z3c.form 3.2.11. (Used in Plone > 4.3.11)
+  [fredvd]
+
+
+1.9.1 (2017-02-12)
+------------------
+
+- Fix value for at.AjaxSelectWidget when the edit form returns with
+  validation errors
+  [petschki]
+
+- Use the RAW text for Archetypes based TinyMCE content, this fixes
+  image handling with TinyMCE.
+  [pcdummy]
+
+- Possible to use Rich Text (TinyMCE 4, properly configured) pattern
+  in Dexterity types other than plone.app.contenttypes implementation,
+  with consistent behavior with other uses of TinyMCE on Plone 4 sites.
+  This is useful for Plone 4 sites wanting to use plone.app.widgets
+  wthout requiring plone.app.contentypes.
+  [seanupton]
+
+- Update README with notes regarding rich text widget.
+  [seanupton]
+
+- Update widgets bundle to the latest (2.3.0 - unreleased, 2016-08-18).
+  This includes minor widget improvements for related items widget,
+  for icon compatibility with Plone 4, and button display style.  It
+  also fixes progress bar styles for upload pattern as used in TinyMCE.
+  [seanupton]
+
+- Now possible to clear Archetypes date/time field value, replacing any
+  previous value with empty value, when desired for both date and datetime.
+  [seanupton]
+
+- TinyMCE folder context adjusted appropriately for use in static text
+  portlet: uploads now work, browsing now starts at appropriate root.
+  [seanupton]
+
+- Expose alternate RichTextFieldWidget factory, not tightly bound to
+  plone.app.contenttypes, when plone.app.contenttypes is not installed.
+  This may be useful for use by static text portlet, other Dexterity
+  content types on sties where plone.app.contenttypes is not in use.
+  [seanupton]
+
+- Enable pasting of foreground, background color if and only if the
+  foreground and background color toolbar buttons are enabled for editing.
+  [seanupton]
+
+- Browser spell check enabled by default; this is usually desired for most
+  editing, and low-risk.  Users can use Shift + right-click (Firefox)
+  or Control + right-click (Chrome) to show correction suggestions.
+  [seanupton]
+
+- Related items options computes context for all z3c.form based forms,
+  not just add forms. This is congruent with how plone.app.widgets 2.0.4+.
+  [seanupton]
+
+- Omit 'folderTypes' parameter from configuration of related items widget.
+  This is no longer used by mockup 2.x.
+  [seanupton]
+
+- Related items data converter supports explicit value_type specified in
+  field when using collections of UUID values.  This is backward-compatible
+  with previous conversion to field values, supports str/unicode value(s),
+  whichever is specified by field (backported from related change to
+  plone.app.z3cform 2.0.1).
+  [seanupton]
 
 
 1.9 (2016-06-21)
